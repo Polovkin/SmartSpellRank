@@ -1,12 +1,12 @@
 local spellRanks = {
-    ["Healing Touch"] = { 37, 88, 195, 363, 572, 742, 936, 1199, 1440, 1680 }
+    ["Healing Touch"] = { 47.5, 104.5, 225.5, 413.5, 641.5, 803.5, 1012.5, 1400.5, 2000.5, 2200 }
 }
 
 
 local function GetTargetHPDev()
     if UnitExists("target") then
         local targetMaxHP = UnitHealthMax("target")
-        local randomHPPercentage = math.random(10, 90) / 100 -- Від 10% до 90%
+        local randomHPPercentage = math.random(90, 98) / 100
         local targetCurrentHP = math.floor(targetMaxHP * randomHPPercentage)
         local targetMissingHP = targetMaxHP - targetCurrentHP
         SmartLogger:PrintInfo("[DEV MODE] Simulated Target HP: " .. targetCurrentHP .. "/" .. targetMaxHP .. " (Missing: " .. targetMissingHP .. ")")
@@ -18,16 +18,22 @@ local function GetTargetHPDev()
 end
 
 local function GetTargetHP()
-    if UnitExists("target") then
-        local targetCurrentHP = UnitHealth("target")
-        local targetMaxHP = UnitHealthMax("target")
-        local targetMissingHP = targetMaxHP - targetCurrentHP
-        SmartLogger:PrintInfo("Target HP: " .. targetCurrentHP .. "/" .. targetMaxHP .. " (Missing: " .. targetMissingHP .. ")")
-        return targetMissingHP
-    else
+    if not UnitExists("target") then
         SmartLogger:PrintError("No target selected.")
         return nil
     end
+
+    if not UnitIsFriend("player", "target") then
+        SmartLogger:PrintError("Target is not a friendly unit.")
+        return nil
+    end
+
+    local targetCurrentHP = UnitHealth("target")
+    local targetMaxHP = UnitHealthMax("target")
+    local targetMissingHP = targetMaxHP - targetCurrentHP
+    SmartLogger:PrintInfo("Target HP: " .. targetCurrentHP .. "/" .. targetMaxHP .. " (Missing: " .. targetMissingHP .. ")")
+
+    return targetMissingHP
 end
 
 local function GetEffectiveSpellRank(spellName)
@@ -64,17 +70,34 @@ local function GetEffectiveSpellRank(spellName)
     return bestRank
 end
 
-local myButton = CreateFrame("Button", "MySimpleButton", UIParent, "UIPanelButtonTemplate")
-myButton:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-myButton:SetSize(120, 40)
-myButton:SetText("Click Me")
 
-myButton:SetScript("OnClick", function()
+local healButton = CreateFrame("Button", "HealSpellButton", UIParent, "SecureActionButtonTemplate")
+healButton:SetAttribute("type", "spell")
+healButton:SetAttribute("spell", "Healing Touch(Rank 1)") -- Початкове значення
+healButton:SetPoint("CENTER", UIParent, "CENTER", 0, 100)
+healButton:SetSize(120, 40)
+
+-- Додаємо фон через текстуру
+local bg = healButton:CreateTexture(nil, "BACKGROUND")
+bg:SetAllPoints(healButton)
+bg:SetColorTexture(0, 0, 0, 0.5) -- Чорний фон з прозорістю
+
+local buttonText = healButton:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+buttonText:SetPoint("CENTER", healButton, "CENTER", 0, 0)
+buttonText:SetText("Heal")
+healButton:SetFontString(buttonText)
+
+healButton:SetScript("PreClick", function(self)
     local spellName = "Healing Touch"
     local spellRank = GetEffectiveSpellRank(spellName)
+
     if spellRank then
-        SmartLogger:PrintInfo("Casting " .. spellName .. " (Rank " .. spellRank .. ")")
+        self:SetAttribute("spell", spellName .. "(Rank " .. spellRank .. ")")
+        SmartLogger:PrintInfo("Setting up: " .. spellName .. " (Rank " .. spellRank .. ")")
     else
         SmartLogger:PrintError("Failed to determine spell rank.")
     end
 end)
+
+healButton:Show()
+
