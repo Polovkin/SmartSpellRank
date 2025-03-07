@@ -6,3 +6,8 @@
 ## LoadOnDemand: 0
 
 SmartSpellRank.lua
+Commands.lua
+CastHeal.lua
+
+
+

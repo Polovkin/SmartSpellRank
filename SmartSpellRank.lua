@@ -5,5 +5,5 @@ local helloMessage = "|cff00ff00Hello, World! Your addon is working in WoW 1.15.
 frame:RegisterEvent("PLAYER_LOGIN")
 
 frame:SetScript("OnEvent", function(self, event, ...)
-    print(helloMessage + addonName)
+    print(helloMessage .. " " .. addonName)
 end)
