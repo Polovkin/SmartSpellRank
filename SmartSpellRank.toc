@@ -1,0 +1,8 @@
+## Interface: 11506
+## Title: Smart Spell Rank addon
+## Notes: Get the most efficient spell rank for your healing target
+## Author: Polovkin
+## Version: 1.0
+## LoadOnDemand: 0
+
+SmartSpellRank.lua
