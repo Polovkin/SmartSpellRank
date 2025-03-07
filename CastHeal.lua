@@ -42,8 +42,8 @@ local function GetEffectiveSpellRank(spellName)
         return
     end
 
-    --[[local targetMissingHP = GetTargetHP()]]
     local targetMissingHP = GetTargetHPDev()
+
     if not targetMissingHP then
         SmartLogger:PrintError("Unable to determine missing HP.")
         return
@@ -71,33 +71,56 @@ local function GetEffectiveSpellRank(spellName)
 end
 
 
-local healButton = CreateFrame("Button", "HealSpellButton", UIParent, "SecureActionButtonTemplate")
-healButton:SetAttribute("type", "spell")
-healButton:SetAttribute("spell", "Healing Touch(Rank 1)") -- Початкове значення
-healButton:SetPoint("CENTER", UIParent, "CENTER", 0, 100)
-healButton:SetSize(120, 40)
-
--- Додаємо фон через текстуру
-local bg = healButton:CreateTexture(nil, "BACKGROUND")
-bg:SetAllPoints(healButton)
-bg:SetColorTexture(0, 0, 0, 0.5) -- Чорний фон з прозорістю
-
-local buttonText = healButton:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-buttonText:SetPoint("CENTER", healButton, "CENTER", 0, 0)
-buttonText:SetText("Heal")
-healButton:SetFontString(buttonText)
-
-healButton:SetScript("PreClick", function(self)
-    local spellName = "Healing Touch"
-    local spellRank = GetEffectiveSpellRank(spellName)
-
-    if spellRank then
-        self:SetAttribute("spell", spellName .. "(Rank " .. spellRank .. ")")
-        SmartLogger:PrintInfo("Setting up: " .. spellName .. " (Rank " .. spellRank .. ")")
-    else
-        SmartLogger:PrintError("Failed to determine spell rank.")
+local function CreateHealButton(parent, unit)
+    if not parent then
+        SmartLogger:PrintError("No parent frame for " .. unit)
+        return nil
     end
-end)
 
-healButton:Show()
+    local btn = CreateFrame("Button", nil, parent, "SecureActionButtonTemplate")
+    btn:SetAttribute("type", "spell")
 
+    btn:SetSize(60, 25)
+    btn:SetPoint("TOP", parent, "BOTTOM", 0, -5)
+
+    local bg = btn:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints(btn)
+    bg:SetColorTexture(0, 0, 0, 0.5)
+
+    local text = btn:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    text:SetPoint("CENTER", btn, "CENTER", 0, 0)
+    text:SetText("Heal")
+
+    btn:SetScript("PreClick", function(self)
+        if not UnitExists(unit) then
+            SmartLogger:PrintError("No valid target for " .. unit)
+            self:SetAttribute("spell", nil)
+            return
+        end
+
+        local spellName = "Healing Touch"
+        local spellRank = GetEffectiveSpellRank(spellName)
+
+        if spellRank then
+            self:SetAttribute("spell", spellName .. "(Rank " .. spellRank .. ")")
+            self:SetAttribute("unit", unit)
+            SmartLogger:PrintInfo("Healing " .. UnitName(unit) .. " with " .. spellName .. " (Rank " .. spellRank .. ")")
+        else
+            SmartLogger:PrintError("Failed to determine spell rank.")
+            self:SetAttribute("spell", nil)
+        end
+    end)
+
+    btn:Show()
+    return btn
+end
+
+for i = 1, 4 do
+    local partyFrame = _G["PartyMemberFrame" .. i] or _G["CompactPartyFrameMember" .. i]
+    if partyFrame then
+        SmartLogger:PrintInfo("Creating button for " .. "party" .. i)
+        local healButton = CreateHealButton(partyFrame, "party" .. i)
+    else
+        SmartLogger:PrintError("Party frame " .. i .. " not found")
+    end
+end
