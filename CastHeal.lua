@@ -1,41 +1,51 @@
 local spellRanks = {
-    ["Healing Touch"] = {37, 88, 195, 363, 572, 742, 936, 1199, 1440, 1680, 1890},
-    ["Regrowth"] = {150, 300, 450, 600, 750, 900, 1050, 1200, 1350},
-    ["Rejuvenation"] = {50, 100, 175, 245, 315, 400, 490, 600, 750, 900}
+    ["Healing Touch"] = { 37, 88, 195, 363, 572, 742, 936, 1199, 1440, 1680, 1890 }
 }
 
-local myButton = CreateFrame("Button", "MySecureButton", UIParent, "SecureActionButtonTemplate")
-myButton:SetAttribute("type", "macro")  -- Тип дії: макрос
-myButton:SetPoint("CENTER", UIParent, "CENTER", 0, -50) -- Центр екрана
-myButton:SetSize(100, 40) -- Ширина 100, висота 40
+local function PrintInfo(message)
+    DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[SmartSpellRank]:|r " .. message)
+end
 
--- Робимо кнопку видимою
-myButton:SetNormalTexture("Interface/Buttons/UI-Panel-Button-Up")
-myButton:SetHighlightTexture("Interface/Buttons/UI-Panel-Button-Highlight")
-myButton:SetPushedTexture("Interface/Buttons/UI-Panel-Button-Down")
+local function PrintError(message)
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[SmartSpellRank]:|r " .. message)
+end
+
+local function GetTargetHPDev()
+    if UnitExists("target") then
+        local targetMaxHP = UnitHealthMax("target")
+        local randomHPPercentage = math.random(10, 90) / 100 -- Від 10% до 90%
+        local targetCurrentHP = math.floor(targetMaxHP * randomHPPercentage)
+        local targetMissingHP = targetMaxHP - targetCurrentHP
+        PrintInfo("[DEV MODE] Simulated Target HP: " .. targetCurrentHP .. "/" .. targetMaxHP .. " (Missing: " .. targetMissingHP .. ")")
+        return targetMissingHP
+    else
+        PrintError("No target selected.")
+        return nil
+    end
+end
 
 local function GetTargetHP()
     if UnitExists("target") then
         local targetCurrentHP = UnitHealth("target")
         local targetMaxHP = UnitHealthMax("target")
         local targetMissingHP = targetMaxHP - targetCurrentHP
-        print("|cff00ff00[SmartSpellRank]:|r Target HP: " .. targetCurrentHP .. "/" .. targetMaxHP .. " (Missing: " .. targetMissingHP .. ")")
+        PrintInfo("Target HP: " .. targetCurrentHP .. "/" .. targetMaxHP .. " (Missing: " .. targetMissingHP .. ")")
         return targetMissingHP
     else
-        print("|cffff0000[SmartSpellRank]:|r No target selected.")
+        PrintError("No target selected.")
         return nil
     end
 end
 
-local function UpdateMacro(spellName)
+local function GetEffectiveSpellRank(spellName)
     if not spellRanks[spellName] then
-        print("|cffff0000[SmartSpellRank]:|r Invalid spell name.")
+        PrintError("Invalid spell name.")
         return
     end
 
     local targetMissingHP = GetTargetHP()
     if not targetMissingHP then
-        print("|cffff0000[SmartSpellRank]:|r Unable to determine missing HP.")
+        PrintError("Unable to determine missing HP.")
         return
     end
 
@@ -55,30 +65,22 @@ local function UpdateMacro(spellName)
         bestRank = maxRank
     end
 
-    print("|cff00ff00[SmartSpellRank]:|r Best rank for " .. spellName .. ": " .. bestRank)
+    PrintInfo("Best rank for " .. spellName .. ": " .. bestRank)
 
-    local macroText = "/cast [@target,help,nodead] " .. spellName .. "(Rank " .. bestRank .. ")"
-    myButton:SetAttribute("macrotext", macroText) -- Оновлюємо макрос
+    return bestRank
 end
 
-Commands["heal"] = function(spellName)
-    if spellName then
-        UpdateMacro(spellName)
+local myButton = CreateFrame("Button", "MySimpleButton", UIParent, "UIPanelButtonTemplate")
+myButton:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+myButton:SetSize(120, 40)
+myButton:SetText("Click Me")
+
+myButton:SetScript("OnClick", function()
+    local spellName = "Healing Touch"
+    local spellRank = GetEffectiveSpellRank(spellName)
+    if spellRank then
+        PrintInfo("Casting " .. spellName .. " (Rank " .. spellRank .. ")")
     else
-        print("|cff00ff00[SmartSpellRank]:|r Usage: /ssr heal <spell_name>")
-    end
-end
-
-myButton:SetScript("OnMouseDown", function(self, button)
-    if button == "LeftButton" then
-        print("|cff00ff00[SmartSpellRank]:|r Button pressed: " .. button)
-        UpdateMacro("Healing Touch")
-    end
-end)
-
-myButton:SetScript("OnMouseUp", function(self, button)
-    if button == "LeftButton" then
-        print("|cff00ff00[SmartSpellRank]:|r Casting spell...")
-        myButton:Click()
+        PrintError("Failed to determine spell rank.")
     end
 end)
